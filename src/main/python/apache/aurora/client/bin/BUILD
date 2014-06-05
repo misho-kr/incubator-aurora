@@ -52,3 +52,24 @@ python_library(
       pants('src/main/python/apache/aurora/client:options'),
     ]
 )
+
+python_binary(
+  name = 'aurora_rest',
+  entry_point = 'apache.aurora.client.bin.aurora_rest:proxy_main',
+  dependencies = [
+    pants(':aurora_rest_lib')
+  ]
+)
+
+python_library(
+  name = 'aurora_rest_lib',
+  sources = [ 'aurora_rest.py' ],
+  dependencies = [
+    pants('3rdparty/python:tornado'),
+    pants('3rdparty/python:twitter.common.app'),
+    pants('3rdparty/python:twitter.common.log'),
+    pants('src/main/python/apache/aurora/client/commands:all'),
+    pants('src/main/python/apache/aurora/client:base'),
+    pants('src/main/python/apache/aurora/client/rest:web'),
+  ]
+)
