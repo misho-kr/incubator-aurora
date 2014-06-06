@@ -21,11 +21,11 @@ class VersionHandler(tornado.web.RequestHandler):
 # aurora interface handlers --------------------------------------------
 
 class ListJobsHandler(tornado.web.RequestHandler):
-    def get(self, cluster, username):
+    def get(self, cluster, role):
         logger.info("entered ListJobsHandler::GET")
 
         (jobkey, jobs, errors) = self.application.get_executor().list_jobs(
-                                                            cluster, username)
+                                                            cluster, role)
         if errors is None:
             logger.info("no errors")
             # no jobs were found to termminate, not an error
@@ -51,11 +51,11 @@ class ListJobsHandler(tornado.web.RequestHandler):
             })
 
 class JobHandler(tornado.web.RequestHandler):
-    def put(self, cluster, username, environment, jobname):
+    def put(self, cluster, role, environment, jobname):
         logger.info("entered JobHandler::PUT")
 
         (jobkey, errors) = self.application.get_executor().create_job(
-                                    cluster, username, environment, jobname,
+                                    cluster, role, environment, jobname,
                                     self.request.body)
         if errors is None:
             self.set_status(httplib.CREATED)
@@ -76,11 +76,11 @@ class JobHandler(tornado.web.RequestHandler):
                 "errors":       errors
             })
 
-    def delete(self, cluster, username, environment, jobname):
+    def delete(self, cluster, role, environment, jobname):
         logger.info("entered JobHandler::DELETE")
 
         (jobkey, jobs, errors) = self.application.get_executor().delete_job(
-                                        cluster, username, environment, jobname)
+                                        cluster, role, environment, jobname)
         if errors is None:
             # no jobs were found to termminate, not an error
             if len(jobs) == 0:

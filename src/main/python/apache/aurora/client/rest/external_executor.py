@@ -16,21 +16,21 @@ AURORA_SUCCESS_RESPONSE = r"Response from scheduler: OK"
 
 class AuroraClient():
     def __init__(self, aurora_cmd):
-        logging.info("aurora -- client created")
+        logger.info("aurora -- external executor created")
 
         self.aurora_cmd = aurora_cmd
 
-    def make_job_key(self, cluster, username, environment=None, jobname=None):
+    def make_job_key(self, cluster, role, environment=None, jobname=None):
         if environment is None:
-            return cluster + "/" + username
+            return cluster + "/" + role
         else:
-            return cluster + "/" + username + "/" + environment + "/" + jobname
+            return cluster + "/" + role + "/" + environment + "/" + jobname
 
-    def list_jobs(self, cluster, username):
-        """Method to execute [ aurora list_jobs cluster/username comman ]"""
+    def list_jobs(self, cluster, role):
+        """Method to execute [ aurora list_jobs cluster/role command ]"""
 
-        jobkey = self.make_job_key(cluster, username)
-        logging.info("request to list jobs = %s" % jobkey)
+        jobkey = self.make_job_key(cluster, role)
+        logger.info("request to list jobs = %s" % jobkey)
 
         try:
             with open("/dev/null") as dev_null:
@@ -40,21 +40,21 @@ class AuroraClient():
 
                 jobs = cmd_output.splitlines()
                 if len(jobs) == 0:
-                    logging.info("no jobs found for key = %s" % jobkey)
+                    logger.info("no jobs found for key = %s" % jobkey)
                 for s in jobs:
-                    logging.info("> %s" % s )
+                    logger.info("> %s" % s )
 
                 return(jobkey, jobs, None)
 
         except subprocess.CalledProcessError as e:
-            logging.exception("Failed to list Aurora jobs")
+            logger.exception("Failed to list Aurora jobs")
             return(jobkey, [], ["Exception when listing aurora jobs", e.msg])
 
-    def create_job(self, cluster, username, environment, jobname, jobspec):
+    def create_job(self, cluster, role, environment, jobname, jobspec):
         """Method to create aurora job from job file and job id"""
 
-        jobkey = self.make_job_key(cluster, username, environment, jobname)
-        logging.info("request to create job = %s", jobkey)
+        jobkey = self.make_job_key(cluster, role, environment, jobname)
+        logger.info("request to create job = %s", jobkey)
 
         logger.info("  job spec:")
         lineno = 1
@@ -94,12 +94,12 @@ class AuroraClient():
             logger.warning("aurora -- create job failed")
             return(jobkey, ["Error reported by aurora client:"] + cmd_output_lines)
 
-    def delete_job(self, cluster, username, environment, jobname):
+    def delete_job(self, cluster, role, environment, jobname):
         """Method to delete aurora job by job id"""
 
-        logging.info("aurora -- delete job invoked")
+        logger.info("aurora -- delete job invoked")
 
-        jobkey = cluster + "/" + username + "/" + environment + "/" + jobname
+        jobkey = self.make_job_key(cluster, role, environment, jobname)
 
         logger.info("  job-id: %s" % jobkey)
         logger.info("  job spec:")
@@ -126,10 +126,10 @@ class AuroraClient():
                 cmd_success_status = True
 
         if cmd_success_status:
-            logger.info("aurora -- create job successful")
+            logger.info("aurora -- delete job successful")
             return(jobkey, [jobkey], None)
         else:
-            logger.warning("aurora -- create job failed")
+            logger.warning("aurora -- delete job failed")
             return(jobkey, [], ["Error reported by aurora client" + cmd_output_lines])
 
 # factory --------------------------------------------------------------

@@ -10,16 +10,23 @@ import tornado.web
 
 from apache.aurora.client.rest import (
     application,
-    external_executor
+    external_executor,
+    internal_executor
 )
 
 from tornado.options import define, options
+
 define("port", default=8000, help="run on the given port", type=int)
+define("executor", default="external", help="Type of Aurora command executor", type=str)
 
 def proxy_main():
     tornado.options.parse_command_line()
 
-    client = external_executor.create()
+    if options.executor == "external":
+        client = external_executor.create()
+    elif options.executor == "internal":
+        client = internal_executor.create()
+
     app = application.create("alpha", executor=client)
 
     http_server = tornado.httpserver.HTTPServer(app)
