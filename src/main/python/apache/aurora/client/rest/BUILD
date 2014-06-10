@@ -1,7 +1,7 @@
 
 python_library(
   name = 'web',
-  sources = [ 'application.py', 'external_executor.py', 'internal_executor.py' ],
+  sources = [ 'application.py', 'application_coroutine.py', 'external_executor.py', 'internal_executor.py' ],
   dependencies = [
     pants('3rdparty/python:tornado'),
     pants('3rdparty/python:twitter.common.app'),
