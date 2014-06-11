@@ -8,38 +8,8 @@ import httplib
 
 import tornado.web
 from tornado import gen
-from tornado.concurrent import return_future
 
 logger = logging.getLogger("tornado.access")
-
-# coroutine executor --------------------------------------------------
-
-class CoroutineExecutor():
-    def __init__(self, executor):
-        logger.info("aurora -- coroutine executor created")
-
-        self.executor = executor
-
-    @return_future
-    def list_jobs(self, cluster, role, callback=None):
-        logger.info("entered CoroutineExecutor::list_jobs")
-
-        result = self.executor.list_jobs(cluster, role)
-        callback(result)
-
-    @return_future
-    def create_job(self, cluster, role, environment, jobname, jobspec, callback=None):
-        logger.info("entered CoroutineExecutor::create_job")
-
-        result = self.executor.create_job(cluster, role, environment, jobname, jobspec)
-        callback(result)
-
-    @return_future
-    def delete_job(self, cluster, role, environment, jobname, callback=None):
-        logger.info("entered CoroutineExecutor::delete_job")
-
-        result = self.executor.delete_job(cluster, role, environment, jobname)
-        callback(result)
 
 # basic handlers -------------------------------------------------------
 
@@ -153,7 +123,7 @@ class AuroraApplicaiton(tornado.web.Application):
         logging.info("aurora -- application created")
 
         self.url_prefix = prefix.lstrip('/').rstrip('/')
-        self.executor   = CoroutineExecutor(executor)
+        self.executor   = executor
 
         settings["debug"] = True
         handlers = self.make_app_handlers(self.url_prefix, [

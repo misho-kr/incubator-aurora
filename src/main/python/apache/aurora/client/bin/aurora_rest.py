@@ -10,9 +10,10 @@ import tornado.web
 
 from apache.aurora.client.rest import (
     application,
-    application_coroutine,
+    application_async,
     external_executor,
-    internal_executor
+    internal_executor,
+    coroutine_executor
 )
 
 from tornado.options import define, options
@@ -30,7 +31,7 @@ def proxy_main():
         client = internal_executor.create()
 
     if options.application == "coroutine":
-        app = application_coroutine.create("alpha", executor=client)
+        app = application_async.create("alpha", executor=coroutine_executor.create(client))
     else:
         app = application.create("alpha", executor=client)
 
