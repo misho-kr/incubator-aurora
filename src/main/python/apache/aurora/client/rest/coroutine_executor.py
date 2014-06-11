@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # ----------------------------------------------------------------------
-#  Simple executor for Aurora commands
+#  Simple synchronous executor for Aurora commands
 # ----------------------------------------------------------------------
 
 import logging
@@ -16,12 +16,12 @@ class CoroutineExecutor():
 
     Implementation of the Decorator design pattern. It makes possible to
     pass executor objects that run in synchronous mode to Tornado Handlers
-    that use coroutines and futures to implement asynchronous execution of
-    requests.
+    that use coroutines and futures for asynchronous execution of requests.
 
-    The executor will delegate each command to another executor and then
-    invoke the callback. This a test class to experiment with Tornado async
-    operations. The execution of Aurora commands is still synchronouse.
+    This executor will delegate each command to another synchronous executor
+    and then invoke the callback. Therefore the execution of Aurora commands
+    is still synchronouse, i.e. this a test class to experiment with Tornado
+    async operations.
     """
 
     def __init__(self, executor):
