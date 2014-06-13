@@ -20,7 +20,7 @@ class ThreadExecutor():
     """
 
     def __init__(self, delegate, thread_pool, io_loop):
-        logger.info("aurora -- thread-pool executor(threads=%s) created" %
+        logger.info("ThreadExecutor(threads=%s) created" %
             (str(thread_pool._max_workers) if thread_pool._max_workers else "unlimited"))
 
         self.delegate = delegate

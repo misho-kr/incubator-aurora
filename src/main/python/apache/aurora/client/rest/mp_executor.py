@@ -24,7 +24,7 @@ class ProcessExecutor():
     """
 
     def __init__(self, delegate, thread_pool, io_loop):
-        logger.info("aurora -- process-pool executor(procs=%s) created" %
+        logger.info("ProcessExecutor(procs=%s) created" %
             (str(thread_pool._max_workers) if thread_pool._max_workers else "unlimited"))
 
         self.delegate = delegate
@@ -32,7 +32,7 @@ class ProcessExecutor():
         self.io_loop  = io_loop
 
     def run_on_executor(self, method_name, obj, *args, **kwargs):
-        logger.info("ProcessExecutor::run_on_executor will schedule method: %s" % method_name)
+        logger.info("ProcessExecutor schedule method: %s" % method_name)
 
         return self.executor.submit(call_by_name, method_name, obj, *args, **kwargs)
 
@@ -42,7 +42,7 @@ class ProcessExecutor():
 
     def __getattr__(self, name):
         if name in self.delegated_methods:
-            logger.info("ProcessExecutor::run_on_executor will lookup method: %s" % name)
+            logger.info("ProcessExecutor lookup method: %s" % name)
             return partial(self.run_on_executor, name, self.delegate)
         else:
             raise AttributeError("Instance does not have attribute: %s" % name)
