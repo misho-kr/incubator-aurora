@@ -14,7 +14,8 @@ from apache.aurora.client.rest import (
     external_executor,
     internal_executor,
     coroutine_executor,
-    concurrent_executor
+    mt_executor,
+    mp_executor
 )
 
 from tornado.options import define, options
@@ -36,7 +37,10 @@ def proxy_main():
         app = application_async.create("alpha", executor=coroutine_executor.create(client))
     elif options.application == "thread":
         app = application_async.create("alpha",
-                executor=concurrent_executor.create(client, max_workers=options.parallel))
+                executor=mt_executor.create(client, max_workers=options.parallel))
+    elif options.application == "process":
+        app = application_async.create("alpha",
+                executor=mp_executor.create(client, max_procs=options.parallel))
     else:
         app = application.create("alpha", executor=client)
 

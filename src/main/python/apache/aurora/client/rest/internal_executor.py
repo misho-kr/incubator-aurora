@@ -16,6 +16,9 @@ logger = logging.getLogger("tornado.application")
 
 # basic handlers -------------------------------------------------------
 
+def caller_list_jobs(obj, cluster, role):
+    return obj.list_jobs(cluster, role)
+
 class AuroraClient():
     def __init__(self):
         logger.info("aurora -- internal executor created")
