@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------
 
 import logging
-from functools import partial, wraps
+from functools import partial   # , wraps
 
 from tornado.ioloop import IOLoop
 from concurrent.futures import ProcessPoolExecutor
@@ -37,7 +37,7 @@ class ProcessExecutor():
         return self.executor.submit(call_by_name, method_name, obj, *args, **kwargs)
 
     delegated_methods = [
-        "list_jobs", "create_job", "delete_job"
+        "list_jobs", "create_job", "update_job", "delete_job"
     ]
 
     def __getattr__(self, name):

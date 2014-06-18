@@ -40,6 +40,12 @@ class ThreadExecutor():
         return self.delegate.create_job(cluster, role, environment, jobname, jobspec)
 
     @run_on_executor
+    def update_job(self, cluster, role, environment, jobname, jobspec):
+        logger.info("entered ThreadExecutor::update_job")
+
+        return self.delegate.update_job(cluster, role, environment, jobname, jobspec)
+
+    @run_on_executor
     def delete_job(self, cluster, role, environment, jobname):
         logger.info("entered ThreadExecutor::delete_job")
 

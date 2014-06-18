@@ -59,16 +59,54 @@ class ListJobsHandler(tornado.web.RequestHandler):
         self.finish()
 
 class JobHandler(tornado.web.RequestHandler):
-    @tornado.web.asynchronous
-    @gen.coroutine
+    # @tornado.web.asynchronous
     def put(self, cluster, role, environment, jobname):
         logger.info("entered JobHandler::PUT")
+
+        if self.get_query_argument("update", default=None) is not None:
+            self.put_for_update(cluster, role, environment, jobname)
+        else:
+            self.put_to_create(cluster, role, environment, jobname)
+
+    @tornado.web.asynchronous
+    @gen.coroutine
+    def put_to_create(self, cluster, role, environment, jobname):
+        logger.info("entered JobHandler::PUT-TO-CREATE")
 
         (jobkey, errors) = yield self.application.get_executor().create_job(
                                         cluster, role, environment, jobname,
                                         self.request.body)
         if errors is None:
             self.set_status(httplib.CREATED)
+            self.write({
+                "status":       "success",
+                "key":          jobkey,
+                "count":        1,
+                "job":          jobkey
+            })
+
+        else:
+            self.set_status(httplib.INTERNAL_SERVER_ERROR)
+            self.write({
+                "status":       "failure",
+                "key":          jobkey,
+                "count":        0,
+                "job":          [],
+                "errors":       errors
+            })
+
+    @tornado.web.asynchronous
+    @gen.coroutine
+    def put_for_update(self, cluster, role, environment, jobname):
+        logger.info("entered JobHandler::PUT-FOR-UPDATE")
+
+        (jobkey, errors) = yield self.application.get_executor().update_job(
+                                        cluster, role, environment, jobname,
+                                        self.request.body)
+
+        logger.info("still in JobHandler::PUT-FOR-UPDATE")
+        if errors is None:
+            self.set_status(httplib.ACCEPTED)
             self.write({
                 "status":       "success",
                 "key":          jobkey,

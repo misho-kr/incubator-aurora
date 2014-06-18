@@ -44,6 +44,13 @@ class CoroutineExecutor():
         callback(result)
 
     @return_future
+    def update_job(self, cluster, role, environment, jobname, jobspec, callback=None):
+        logger.info("entered CoroutineExecutor::update_job")
+
+        result = self.executor.update_job(cluster, role, environment, jobname, jobspec)
+        callback(result)
+
+    @return_future
     def delete_job(self, cluster, role, environment, jobname, callback=None):
         logger.info("entered CoroutineExecutor::delete_job")
 

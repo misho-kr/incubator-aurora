@@ -94,6 +94,50 @@ class AuroraClient():
             logger.warning("aurora -- create job failed")
             return(jobkey, ["Error reported by aurora client:"] + cmd_output_lines)
 
+    def update_job(self, cluster, role, environment, jobname, jobspec):
+        """Method to update aurora job from job file and job id"""
+
+        jobkey = self.make_job_key(cluster, role, environment, jobname)
+        logger.info("request to update job = %s", jobkey)
+
+        logger.info("  job spec:")
+        lineno = 1
+        for l in jobspec.splitlines():
+            logger.info("  %3d: %s" % (lineno, l))
+            lineno += 1
+
+        # aurora client requires jobspec be passed as file, no reading from STDIN
+        cmd_output = ""
+        with tempfile.NamedTemporaryFile(suffix=".aurora") as t:
+            t.write(jobspec)
+            t.flush()
+
+            try:
+                cmd_output = subprocess.check_output(
+                    [self.aurora_cmd, "update", jobkey, t.name],
+                    stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                logger.warning("aurora client exit status: %d, details follow" % e.returncode)
+                for s in e.output.splitlines():
+                    logger.warning("> %s" % s)
+                logger.warning("----------------------------------------")
+
+                return(jobkey, ["Error reported by aurora client:"] + e.output.splitlines())
+
+        cmd_success_status = False
+        cmd_output_lines = cmd_output.splitlines()
+        for s in cmd_output_lines:
+            logger.info("  > %s" % s)
+            if AURORA_SUCCESS_RESPONSE in s:
+                cmd_success_status = True
+
+        if cmd_success_status:
+            logger.info("aurora -- update job successful")
+            return(jobkey, None)
+        else:
+            logger.warning("aurora -- update job failed")
+            return(jobkey, ["Error reported by aurora client:"] + cmd_output_lines)
+
     def delete_job(self, cluster, role, environment, jobname):
         """Method to delete aurora job by job id"""
 
@@ -116,7 +160,7 @@ class AuroraClient():
                 logger.warning("> %s" % s)
             logger.warning("----------------------------------------")
 
-            return(jobkey, [], ["Error reported by aurora client" + e.output.splitlines()])
+            return(jobkey, [], ["Error reported by aurora client"] + e.output.splitlines())
 
         cmd_success_status = False
         cmd_output_lines = cmd_output.splitlines()
@@ -130,7 +174,7 @@ class AuroraClient():
             return(jobkey, [jobkey], None)
         else:
             logger.warning("aurora -- delete job failed")
-            return(jobkey, [], ["Error reported by aurora client" + cmd_output_lines])
+            return(jobkey, [], ["Error reported by aurora client"] + cmd_output_lines)
 
 # factory --------------------------------------------------------------
 

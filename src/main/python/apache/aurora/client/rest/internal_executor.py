@@ -31,7 +31,7 @@ class AuroraClient():
 
     def response_string(self, resp):
         return('Response from scheduler: %s (message: %s)'
-            % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.messageDEPRECATED))
+            % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.message))
 
     def list_jobs(self, cluster, role):
         """Method to execute [ aurora list_jobs cluster/role command ]"""
@@ -91,6 +91,41 @@ class AuroraClient():
             return(jobkey, ["Error reported by aurora client:", responseStr])
 
         logger.info("aurora -- create job successful")
+        return(jobkey, None)
+
+    def update_job(self, cluster, role, environment, jobname, jobspec):
+        """Method to update aurora job from job file and job id"""
+
+        jobkey = self.make_job_key(cluster, role, environment, jobname)
+        logger.info("request to update job = %s", jobkey)
+
+        logger.info("  job spec:")
+        lineno = 1
+        for l in jobspec.splitlines():
+            logger.info("  %3d: %s" % (lineno, l))
+            lineno += 1
+
+        config = None
+        with tempfile.NamedTemporaryFile(suffix=".aurora") as config_file:
+            config_file.write(jobspec)
+            config_file.flush()
+            try:
+                options = { 'json': False, 'bindings': () }
+                config = get_job_config(jobkey, config_file.name, options)
+            except ValueError as e:
+                logger.exception("Failed to update Aurora job")
+                logger.warning("----------------------------------------")
+                return(jobkey, ["Failed to update Aurora job", str(e)])
+
+        api = make_client(cluster)
+        resp = api.update_job(config)
+        if resp.responseCode != ResponseCode.OK:
+            logger.warning("aurora -- update job failed")
+            responseStr = self.response_string(resp)
+            logger.warning(responseStr)
+            return(jobkey, ["Error reported by aurora client:", responseStr])
+
+        logger.info("aurora -- update job successful")
         return(jobkey, None)
 
     def delete_job(self, cluster, role, environment, jobname):
