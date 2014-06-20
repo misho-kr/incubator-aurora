@@ -31,7 +31,7 @@ class AuroraClient():
 
     def response_string(self, resp):
         return('Response from scheduler: %s (message: %s)'
-            % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.message))
+            % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.messageDEPRECATED))
 
     def list_jobs(self, cluster, role):
         """Method to execute [ aurora list_jobs cluster/role command ]"""
