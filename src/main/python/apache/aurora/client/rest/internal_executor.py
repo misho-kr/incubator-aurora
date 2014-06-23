@@ -32,6 +32,7 @@ class AuroraClient():
     def response_string(self, resp):
         return('Response from scheduler: %s (message: %s)'
             % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.messageDEPRECATED))
+                                                    # yes, this is the actual attribute name
 
     def list_jobs(self, cluster, role):
         """Method to execute [ aurora list_jobs cluster/role command ]"""
@@ -61,8 +62,9 @@ class AuroraClient():
     def create_job(self, cluster, role, environment, jobname, jobspec):
         """Method to create aurora job from job file and job id"""
 
-        jobkey = self.make_job_key(cluster, role, environment, jobname)
-        logger.info("request to create job = %s", jobkey)
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+        logger.info("request to create job = %s", job_key.to_path())
 
         logger.info("  job spec:")
         lineno = 1
@@ -76,28 +78,29 @@ class AuroraClient():
             config_file.flush()
             try:
                 options = { 'json': False, 'bindings': () }
-                config = get_job_config(jobkey, config_file.name, options)
+                config = get_job_config(job_key.to_path(), config_file.name, options)
             except ValueError as e:
                 logger.exception("Failed to create Aurora job")
                 logger.warning("----------------------------------------")
-                return(jobkey, ["Failed to create Aurora job", str(e)])
+                return(job_key.to_path(), ["Failed to create Aurora job", str(e)])
 
-        api = make_client(cluster)
+        api = make_client(job_key.cluster)
         resp = api.create_job(config)
         if resp.responseCode != ResponseCode.OK:
             logger.warning("aurora -- create job failed")
             responseStr = self.response_string(resp)
             logger.warning(responseStr)
-            return(jobkey, ["Error reported by aurora client:", responseStr])
+            return(job_key.to_path(), ["Error reported by aurora client:", responseStr])
 
         logger.info("aurora -- create job successful")
-        return(jobkey, None)
+        return(job_key.to_path(), None)
 
     def update_job(self, cluster, role, environment, jobname, jobspec):
         """Method to update aurora job from job file and job id"""
 
-        jobkey = self.make_job_key(cluster, role, environment, jobname)
-        logger.info("request to update job = %s", jobkey)
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+        logger.info("request to update job = %s", job_key.to_path())
 
         logger.info("  job spec:")
         lineno = 1
@@ -111,11 +114,11 @@ class AuroraClient():
             config_file.flush()
             try:
                 options = { 'json': False, 'bindings': () }
-                config = get_job_config(jobkey, config_file.name, options)
+                config = get_job_config(job_key.to_path(), config_file.name, options)
             except ValueError as e:
                 logger.exception("Failed to update Aurora job")
                 logger.warning("----------------------------------------")
-                return(jobkey, ["Failed to update Aurora job", str(e)])
+                return(job_key.to_path(), ["Failed to update Aurora job", str(e)])
 
         api = make_client(cluster)
         resp = api.update_job(config)
@@ -123,10 +126,28 @@ class AuroraClient():
             logger.warning("aurora -- update job failed")
             responseStr = self.response_string(resp)
             logger.warning(responseStr)
-            return(jobkey, ["Error reported by aurora client:", responseStr])
+            return(job_key.to_path(), ["Error reported by aurora client:", responseStr])
 
         logger.info("aurora -- update job successful")
-        return(jobkey, None)
+        return(job_key.to_path(), None)
+
+    def cancel_update_job(self, cluster, role, environment, jobname):
+        """Method to cancel an update of aurora job by job id"""
+
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+        logger.info("request to cancel update of job = %s", job_key.to_path())
+
+        api = make_client(cluster)
+        resp = api.cancel_job(job_key, options=None)
+        if resp.responseCode != ResponseCode.OK:
+            logger.warning("aurora -- cancel the update of job failed")
+            responseStr = self.response_string(resp)
+            logger.warning(responseStr)
+            return(job_key.to_path(), ["Error reported by aurora client:", responseStr])
+
+        logger.info("aurora -- cancel of update job successful")
+        return(job_key.to_path(), None)
 
     def delete_job(self, cluster, role, environment, jobname):
         """Method to delete aurora job by job id"""
@@ -135,9 +156,7 @@ class AuroraClient():
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
-
-        logger.info("  job-id: %s" % job_key)
-        logger.info("  job spec:")
+        logger.info("request to delete job = %s", job_key.to_path())
 
         api = make_client(job_key.cluster)
         resp = api.kill_job(job_key, None)

@@ -7,6 +7,8 @@ import logging
 import tempfile
 import subprocess
 
+from apache.aurora.common.aurora_job_key import AuroraJobKey
+
 logger = logging.getLogger("tornado.application")
 
 DEFAULT_AURORA_CMD      = "/home/mkrastev/projects/Mesos/incubator-aurora.git/dist/aurora_client.pex"
@@ -53,8 +55,9 @@ class AuroraClient():
     def create_job(self, cluster, role, environment, jobname, jobspec):
         """Method to create aurora job from job file and job id"""
 
-        jobkey = self.make_job_key(cluster, role, environment, jobname)
-        logger.info("request to create job = %s", jobkey)
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+        logger.info("request to create job = %s", job_key.to_path())
 
         logger.info("  job spec:")
         lineno = 1
@@ -70,7 +73,7 @@ class AuroraClient():
 
             try:
                 cmd_output = subprocess.check_output(
-                    [self.aurora_cmd, "create", jobkey, t.name],
+                    [self.aurora_cmd, "create", job_key.to_path(), t.name],
                     stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 logger.warning("aurora client exit status: %d, details follow" % e.returncode)
@@ -78,7 +81,7 @@ class AuroraClient():
                     logger.warning("> %s" % s)
                 logger.warning("----------------------------------------")
 
-                return(jobkey, ["Error reported by aurora client:"] + e.output.splitlines())
+                return(job_key.to_path(), ["Error reported by aurora client:"] + e.output.splitlines())
 
         cmd_success_status = False
         cmd_output_lines = cmd_output.splitlines()
@@ -89,16 +92,17 @@ class AuroraClient():
 
         if cmd_success_status:
             logger.info("aurora -- create job successful")
-            return(jobkey, None)
+            return(job_key.to_path(), None)
         else:
             logger.warning("aurora -- create job failed")
-            return(jobkey, ["Error reported by aurora client:"] + cmd_output_lines)
+            return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output_lines)
 
     def update_job(self, cluster, role, environment, jobname, jobspec):
         """Method to update aurora job from job file and job id"""
 
-        jobkey = self.make_job_key(cluster, role, environment, jobname)
-        logger.info("request to update job = %s", jobkey)
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+        logger.info("request to update job = %s", job_key.to_path())
 
         logger.info("  job spec:")
         lineno = 1
@@ -114,7 +118,7 @@ class AuroraClient():
 
             try:
                 cmd_output = subprocess.check_output(
-                    [self.aurora_cmd, "update", jobkey, t.name],
+                    [self.aurora_cmd, "update", job_key.to_path(), t.name],
                     stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 logger.warning("aurora client exit status: %d, details follow" % e.returncode)
@@ -122,7 +126,7 @@ class AuroraClient():
                     logger.warning("> %s" % s)
                 logger.warning("----------------------------------------")
 
-                return(jobkey, ["Error reported by aurora client:"] + e.output.splitlines())
+                return(job_key.to_path(), ["Error reported by aurora client:"] + e.output.splitlines())
 
         cmd_success_status = False
         cmd_output_lines = cmd_output.splitlines()
@@ -133,26 +137,25 @@ class AuroraClient():
 
         if cmd_success_status:
             logger.info("aurora -- update job successful")
-            return(jobkey, None)
+            return(job_key.to_path(), None)
         else:
             logger.warning("aurora -- update job failed")
-            return(jobkey, ["Error reported by aurora client:"] + cmd_output_lines)
+            return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output_lines)
 
-    def delete_job(self, cluster, role, environment, jobname):
-        """Method to delete aurora job by job id"""
+    def cancel_update_job(self, cluster, role, environment, jobname,):
+        """Method to cancel an update of aurora job by job id"""
 
-        logger.info("aurora -- delete job invoked")
+        logger.info("aurora -- cancel update job invoked")
 
-        jobkey = self.make_job_key(cluster, role, environment, jobname)
-
-        logger.info("  job-id: %s" % jobkey)
-        logger.info("  job spec:")
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+        logger.info("request to cancel update of job = %s", job_key.to_path())
 
         # aurora client requires jobspec be passed as file, no reading from STDIN
         cmd_output = ""
         try:
             cmd_output = subprocess.check_output(
-                [self.aurora_cmd, "killall", jobkey],
+                [self.aurora_cmd, "cancel_update", job_key.to_path()],
                 stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             logger.warning("aurora client exit status: %d, details follow" % e.returncode)
@@ -160,7 +163,45 @@ class AuroraClient():
                 logger.warning("> %s" % s)
             logger.warning("----------------------------------------")
 
-            return(jobkey, [], ["Error reported by aurora client"] + e.output.splitlines())
+            return(job_key.to_path(), ["Error reported by aurora client:"] + e.output.splitlines())
+
+        cmd_success_status = False
+        cmd_output_lines = cmd_output.splitlines()
+        for s in cmd_output_lines:
+            logger.info("  > %s" % s)
+            if AURORA_SUCCESS_RESPONSE in s:
+                cmd_success_status = True
+
+        if cmd_success_status:
+            logger.info("aurora -- cancel update successful")
+            return(job_key.to_path(), None)
+        else:
+            logger.warning("aurora -- cancel update job")
+            return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output_lines)
+
+    def delete_job(self, cluster, role, environment, jobname):
+        """Method to delete aurora job by job id"""
+
+        logger.info("aurora -- delete job invoked")
+
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+
+        logger.info("  job-id: %s" % job_key.to_path())
+        logger.info("  job spec:")
+
+        cmd_output = ""
+        try:
+            cmd_output = subprocess.check_output(
+                [self.aurora_cmd, "killall", job_key.to_path()],
+                stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            logger.warning("aurora client exit status: %d, details follow" % e.returncode)
+            for s in e.output.splitlines():
+                logger.warning("> %s" % s)
+            logger.warning("----------------------------------------")
+
+            return(job_key.to_path(), [], ["Error reported by aurora client"] + e.output.splitlines())
 
         cmd_success_status = False
         cmd_output_lines = cmd_output.splitlines()
@@ -171,10 +212,10 @@ class AuroraClient():
 
         if cmd_success_status:
             logger.info("aurora -- delete job successful")
-            return(jobkey, [jobkey], None)
+            return(job_key.to_path(), [job_key.to_path()], None)
         else:
             logger.warning("aurora -- delete job failed")
-            return(jobkey, [], ["Error reported by aurora client"] + cmd_output_lines)
+            return(job_key.to_path(), [], ["Error reported by aurora client"] + cmd_output_lines)
 
 # factory --------------------------------------------------------------
 

@@ -135,6 +135,27 @@ class UpdateJobHandler(tornado.web.RequestHandler):
     def delete(self, cluster, role, environment, jobname):
         logger.info("entered UpdateJobHandler::DELETE")
 
+        (jobkey, errors) = self.application.get_executor().cancel_update_job(
+                                        cluster, role, environment, jobname)
+        if errors is None:
+            self.set_status(httplib.ACCEPTED)
+            self.write({
+                "status":       "success",
+                "key":          jobkey,
+                "count":        1,
+                "job":          jobkey
+            })
+
+        else:
+            self.set_status(httplib.INTERNAL_SERVER_ERROR)
+            self.write({
+                "status":       "failure",
+                "key":          jobkey,
+                "count":        0,
+                "job":          [],
+                "errors":       errors
+            })
+
 # application ----------------------------------------------------------
 
 class AuroraApplicaiton(tornado.web.Application):
