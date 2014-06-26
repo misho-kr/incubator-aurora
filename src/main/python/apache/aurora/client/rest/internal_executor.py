@@ -131,7 +131,7 @@ class AuroraClient():
         logger.info("aurora -- update job successful")
         return(job_key.to_path(), None)
 
-    def cancel_update_job(self, cluster, role, environment, jobname):
+    def cancel_update_job(self, cluster, role, environment, jobname, jobspec=None):
         """Method to cancel an update of aurora job by job id"""
 
         job_key = AuroraJobKey.from_path(
@@ -149,7 +149,7 @@ class AuroraClient():
         logger.info("aurora -- cancel of update job successful")
         return(job_key.to_path(), None)
 
-    def delete_job(self, cluster, role, environment, jobname):
+    def delete_job(self, cluster, role, environment, jobname, jobspec=None):
         """Method to delete aurora job by job id"""
 
         logger.info("aurora -- delete job invoked")

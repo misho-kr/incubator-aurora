@@ -51,10 +51,24 @@ class CoroutineExecutor():
         callback(result)
 
     @return_future
-    def delete_job(self, cluster, role, environment, jobname, callback=None):
+    def cancel_update_job(self, cluster, role, environment, jobname, jobspec=None, callback=None):
+        logger.info("entered CoroutineExecutor::cancel_update_job")
+
+        result = self.executor.cancel_update_job(cluster, role, environment, jobname, jobspec)
+        callback(result)
+
+    @return_future
+    def restart_job(self, cluster, role, environment, jobname, jobspec=None, callback=None):
+        logger.info("entered CoroutineExecutor::restart_job")
+
+        result = self.executor.restart_job(cluster, role, environment, jobname, jobspec)
+        callback(result)
+
+    @return_future
+    def delete_job(self, cluster, role, environment, jobname, jobspec=None, callback=None):
         logger.info("entered CoroutineExecutor::delete_job")
 
-        result = self.executor.delete_job(cluster, role, environment, jobname)
+        result = self.executor.delete_job(cluster, role, environment, jobname, jobspec)
         callback(result)
 
 # factory --------------------------------------------------------------

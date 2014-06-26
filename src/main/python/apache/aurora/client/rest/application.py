@@ -79,8 +79,12 @@ class JobHandler(tornado.web.RequestHandler):
     def delete(self, cluster, role, environment, jobname):
         logger.info("entered JobHandler::DELETE")
 
+        jobspec = None
+        if self.request.body is not None and len(self.request.body) > 0:
+            jobspec = self.request.body
+
         (jobkey, jobs, errors) = self.application.get_executor().delete_job(
-                                        cluster, role, environment, jobname)
+                                    cluster, role, environment, jobname, jobspec)
         if errors is None:
             # no jobs were found to termminate, not an error
             if len(jobs) == 0:
@@ -105,10 +109,6 @@ class JobHandler(tornado.web.RequestHandler):
 class UpdateJobHandler(tornado.web.RequestHandler):
     def put(self, cluster, role, environment, jobname):
         logger.info("entered UpdateJobHandler::PUT")
-#        logger.info("cluster = %s" % cluster)
-#        logger.info("role = %s" % role)
-#        logger.info("environment = %s" % environment)
-#        logger.info("jobname = %s" % jobname)
 
         (jobkey, errors) = self.application.get_executor().update_job(
                                     cluster, role, environment, jobname,
@@ -135,8 +135,45 @@ class UpdateJobHandler(tornado.web.RequestHandler):
     def delete(self, cluster, role, environment, jobname):
         logger.info("entered UpdateJobHandler::DELETE")
 
+        jobspec = None
+        if self.request.body is not None and len(self.request.body) > 0:
+            jobspec = self.request.body
+
         (jobkey, errors) = self.application.get_executor().cancel_update_job(
-                                        cluster, role, environment, jobname)
+                                    cluster, role, environment, jobname, jobspec)
+        if errors is None:
+            self.set_status(httplib.ACCEPTED)
+            self.write({
+                "status":       "success",
+                "key":          jobkey,
+                "count":        1,
+                "job":          jobkey
+            })
+
+        else:
+            self.set_status(httplib.INTERNAL_SERVER_ERROR)
+            self.write({
+                "status":       "failure",
+                "key":          jobkey,
+                "count":        0,
+                "job":          [],
+                "errors":       errors
+            })
+
+class RestartJobHandler(tornado.web.RequestHandler):
+    def put(self, cluster, role, environment, jobname):
+        logger.info("entered RestartJobHandler::PUT")
+#        logger.info("cluster = %s" % cluster)
+#        logger.info("role = %s" % role)
+#        logger.info("environment = %s" % environment)
+#        logger.info("jobname = %s" % jobname)
+
+        jobspec = None
+        if self.request.body is not None and len(self.request.body) > 0:
+            jobspec = self.request.body
+
+        (jobkey, errors) = self.application.get_executor().restart_job(
+                                    cluster, role, environment, jobname, jobspec)
         if errors is None:
             self.set_status(httplib.ACCEPTED)
             self.write({
@@ -170,6 +207,7 @@ class AuroraApplicaiton(tornado.web.Application):
         settings["debug"] = True
         handlers = self.make_app_handlers(self.url_prefix, [
             (r"/version",                           VersionHandler),
+            (r"/jobs/(.+)/(.+)/(.+)/(.+)/restart",  RestartJobHandler),
             (r"/jobs/(.+)/(.+)/(.+)/(.+)/update",   UpdateJobHandler),
             (r"/jobs/(.+)/(.+)/(.+)/(.+)",          JobHandler),
             (r"/jobs/(.+)/(.+)",                    ListJobsHandler)
