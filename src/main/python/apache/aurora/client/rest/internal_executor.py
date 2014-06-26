@@ -29,6 +29,34 @@ class AuroraClient():
         else:
             return cluster + "/" + role + "/" + environment + "/" + jobname
 
+    def make_job_config(self, job_key, jobspec):
+        """Write jobspec string to file"""
+
+        if jobspec is None:
+            logger.info("job spec not provided")
+            return(None)
+
+        logger.info("job spec:")
+        lineno = 1
+        for l in jobspec.splitlines():
+            logger.info("  %3d: %s" % (lineno, l))
+            lineno += 1
+
+        with tempfile.NamedTemporaryFile(suffix=".aurora") as config_file:
+            config_file.write(jobspec)
+            config_file.flush()
+            try:
+                options = { 'json': False, 'bindings': () }
+                return get_job_config(job_key.to_path(), config_file.name, options)
+            except ValueError as e:
+                logger.exception("Failed to process job configuration")
+                logger.warning("----------------------------------------")
+                raise e
+            except NameError as e:
+                logger.exception("Failed to parse job configuration")
+                logger.warning("----------------------------------------")
+                raise e
+
     def response_string(self, resp):
         return('Response from scheduler: %s (message: %s)'
             % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.messageDEPRECATED))
@@ -66,23 +94,11 @@ class AuroraClient():
                     self.make_job_key(cluster, role, environment, jobname))
         logger.info("request to create job = %s", job_key.to_path())
 
-        logger.info("  job spec:")
-        lineno = 1
-        for l in jobspec.splitlines():
-            logger.info("  %3d: %s" % (lineno, l))
-            lineno += 1
-
-        config = None
-        with tempfile.NamedTemporaryFile(suffix=".aurora") as config_file:
-            config_file.write(jobspec)
-            config_file.flush()
-            try:
-                options = { 'json': False, 'bindings': () }
-                config = get_job_config(job_key.to_path(), config_file.name, options)
-            except ValueError as e:
-                logger.exception("Failed to create Aurora job")
-                logger.warning("----------------------------------------")
-                return(job_key.to_path(), ["Failed to create Aurora job", str(e)])
+        try:
+            config = self.make_job_config(job_key, jobspec)
+        except Exception as e:
+            return(job_key.to_path(), ["Failed to create Aurora job",
+                                       "Can not create job configuration object because", str(e)])
 
         api = make_client(job_key.cluster)
         resp = api.create_job(config)
@@ -100,25 +116,13 @@ class AuroraClient():
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
-        logger.info("request to update job = %s", job_key.to_path())
+        logger.info("request to update => %s", job_key.to_path())
 
-        logger.info("  job spec:")
-        lineno = 1
-        for l in jobspec.splitlines():
-            logger.info("  %3d: %s" % (lineno, l))
-            lineno += 1
-
-        config = None
-        with tempfile.NamedTemporaryFile(suffix=".aurora") as config_file:
-            config_file.write(jobspec)
-            config_file.flush()
-            try:
-                options = { 'json': False, 'bindings': () }
-                config = get_job_config(job_key.to_path(), config_file.name, options)
-            except ValueError as e:
-                logger.exception("Failed to update Aurora job")
-                logger.warning("----------------------------------------")
-                return(job_key.to_path(), ["Failed to update Aurora job", str(e)])
+        try:
+            config = self.make_job_config(job_key, jobspec)
+        except Exception as e:
+            return(job_key.to_path(), ["Failed to update Aurora job",
+                                       "Can not create job configuration object because", str(e)])
 
         api = make_client(cluster)
         resp = api.update_job(config)
@@ -136,10 +140,16 @@ class AuroraClient():
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
-        logger.info("request to cancel update of job = %s", job_key.to_path())
+        logger.info("request to cancel update of => %s", job_key.to_path())
+
+        try:
+            config = self.make_job_config(job_key, jobspec)
+        except Exception as e:
+            return(job_key.to_path(), ["Failed to cancel update of Aurora job",
+                                       "Can not create job configuration object because", str(e)])
 
         api = make_client(cluster)
-        resp = api.cancel_job(job_key, options=None)
+        resp = api.cancel_update(job_key, config=config)
         if resp.responseCode != ResponseCode.OK:
             logger.warning("aurora -- cancel the update of job failed")
             responseStr = self.response_string(resp)
@@ -156,10 +166,16 @@ class AuroraClient():
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
-        logger.info("request to delete job = %s", job_key.to_path())
+        logger.info("request to delete => %s", job_key.to_path())
+
+        try:
+            config = self.make_job_config(job_key, jobspec)
+        except Exception as e:
+            return(job_key.to_path(), ["Failed to delete Aurora job",
+                                       "Can not create job configuration object because", str(e)])
 
         api = make_client(job_key.cluster)
-        resp = api.kill_job(job_key, None)
+        resp = api.kill_job(job_key, config=config)
         if resp.responseCode != ResponseCode.OK:
             logger.warning("aurora -- kill job failed")
             responseStr = self.response_string(resp)
