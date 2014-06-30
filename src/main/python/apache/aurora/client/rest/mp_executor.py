@@ -23,21 +23,26 @@ class ProcessExecutor():
     """Asynchronous Executor that can be used with async Tornado Application object
     """
 
-    def __init__(self, delegate, thread_pool, io_loop):
+    def __init__(self, delegate, process_pool, io_loop):
         logger.info("ProcessExecutor(procs=%s) created" %
-            (str(thread_pool._max_workers) if thread_pool._max_workers else "unlimited"))
+            (str(process_pool._max_workers) if process_pool._max_workers else "unlimited"))
 
         self.delegate = delegate
-        self.executor = thread_pool
+        self.executor = process_pool
         self.io_loop  = io_loop
 
     def run_on_executor(self, method_name, obj, *args, **kwargs):
-        logger.info("ProcessExecutor schedule method: %s" % method_name)
+        logger.info("ProcessExecutor delegated method: %s" % method_name)
 
         return self.executor.submit(call_by_name, method_name, obj, *args, **kwargs)
 
     delegated_methods = [
-        "list_jobs", "create_job", "update_job", "delete_job"
+        "list_jobs",
+        "create_job",
+        "update_job",
+        "cancel_update_job",
+        "restart_job",
+        "delete_job",
     ]
 
     def __getattr__(self, name):
@@ -49,8 +54,8 @@ class ProcessExecutor():
 
 # factory --------------------------------------------------------------
 
-def create(executor, thread_pool=None, io_loop=None, max_procs=DEFAULT_MAX_PROCESSES):
+def create(executor, process_pool=None, io_loop=None, max_procs=DEFAULT_MAX_PROCESSES):
     io_loop     = io_loop or IOLoop.instance()
-    thread_pool = thread_pool or ProcessPoolExecutor(max_procs)
+    process_pool = process_pool or ProcessPoolExecutor(max_procs)
 
-    return ProcessExecutor(executor, thread_pool, io_loop)
+    return ProcessExecutor(executor, process_pool, io_loop)

@@ -46,6 +46,18 @@ class ThreadExecutor():
         return self.delegate.update_job(cluster, role, environment, jobname, jobspec)
 
     @run_on_executor
+    def cancel_update_job(self, cluster, role, environment, jobname, jobspec=None):
+        logger.info("entered ThreadExecutor::cancel_update_job")
+
+        return self.delegate.cancel_update_job(cluster, role, environment, jobname, jobspec)
+
+    @run_on_executor
+    def restart_job(self, cluster, role, environment, jobname, jobspec=None):
+        logger.info("entered ThreadExecutor::restart_job")
+
+        return self.delegate.restart_job(cluster, role, environment, jobname, jobspec)
+
+    @run_on_executor
     def delete_job(self, cluster, role, environment, jobname):
         logger.info("entered ThreadExecutor::delete_job")
 

@@ -11,6 +11,7 @@ from apache.aurora.client.commands.core import get_job_config
 
 from apache.aurora.client.factory import make_client
 from gen.apache.aurora.api.ttypes import ResponseCode
+from apache.aurora.client.api.updater_util import UpdaterConfig
 
 logger = logging.getLogger("tornado.application")
 
@@ -159,10 +160,42 @@ class AuroraClient():
         logger.info("aurora -- cancel of update job successful")
         return(job_key.to_path(), None)
 
+    def restart_job(self, cluster, role, environment, jobname, jobspec=None):
+        """Method to restart aurora job by job id"""
+
+        job_key = AuroraJobKey.from_path(
+                    self.make_job_key(cluster, role, environment, jobname))
+        logger.info("request to restart => %s", job_key.to_path())
+
+        try:
+            config = self.make_job_config(job_key, jobspec)
+        except Exception as e:
+            return(job_key.to_path(), ["Failed to restart Aurora job",
+                                       "Can not create job configuration object because", str(e)])
+
+        # these are the default values from apache.aurora.client.commands.core.restart()
+        updater_config = UpdaterConfig(
+            1,          # options.batch_size
+            60,         # options.restart_threshold
+            30,         # options.watch_secs
+            0,          # options.max_per_shard_failures
+            0           # options.max_total_failures
+        )
+
+        api = make_client(job_key.cluster)
+        # instances = all shards, health check = 3 sec
+        resp = api.restart(job_key, None, updater_config, 3, config=config)
+        if resp.responseCode != ResponseCode.OK:
+            logger.warning("aurora -- restart job failed")
+            responseStr = self.response_string(resp)
+            logger.warning(responseStr)
+            return(job_key.to_path(), ["Error reported by aurora client:", responseStr])
+
+        logger.info("aurora -- restart job successful")
+        return(job_key.to_path(), None)
+
     def delete_job(self, cluster, role, environment, jobname, jobspec=None):
         """Method to delete aurora job by job id"""
-
-        logger.info("aurora -- delete job invoked")
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
