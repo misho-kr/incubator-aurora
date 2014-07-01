@@ -82,9 +82,11 @@ class JobHandler(tornado.web.RequestHandler):
         jobspec = None
         if self.request.body is not None and len(self.request.body) > 0:
             jobspec = self.request.body
+        shards = self.get_query_arguments("shards")
 
         (jobkey, jobs, errors) = self.application.get_executor().delete_job(
-                                    cluster, role, environment, jobname, jobspec)
+                                    cluster, role, environment, jobname,
+                                    jobspec=jobspec, instances=shards)
         if errors is None:
             # no jobs were found to termminate, not an error
             if len(jobs) == 0:
@@ -110,9 +112,10 @@ class UpdateJobHandler(tornado.web.RequestHandler):
     def put(self, cluster, role, environment, jobname):
         logger.info("entered UpdateJobHandler::PUT")
 
+        shards = self.get_query_arguments("shards")
         (jobkey, errors) = self.application.get_executor().update_job(
                                     cluster, role, environment, jobname,
-                                    self.request.body)
+                                    jobspec=self.request.body, instances=shards)
         if errors is None:
             self.set_status(httplib.ACCEPTED)
             self.write({
@@ -163,17 +166,15 @@ class UpdateJobHandler(tornado.web.RequestHandler):
 class RestartJobHandler(tornado.web.RequestHandler):
     def put(self, cluster, role, environment, jobname):
         logger.info("entered RestartJobHandler::PUT")
-#        logger.info("cluster = %s" % cluster)
-#        logger.info("role = %s" % role)
-#        logger.info("environment = %s" % environment)
-#        logger.info("jobname = %s" % jobname)
 
         jobspec = None
         if self.request.body is not None and len(self.request.body) > 0:
             jobspec = self.request.body
+        shards = self.get_query_arguments("shards")
 
         (jobkey, errors) = self.application.get_executor().restart_job(
-                                    cluster, role, environment, jobname, jobspec)
+                                    cluster, role, environment, jobname,
+                                    jobspec=jobspec, instances=shards)
         if errors is None:
             self.set_status(httplib.ACCEPTED)
             self.write({

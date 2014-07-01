@@ -31,7 +31,7 @@ class AuroraClient():
     def make_jobspec_file(self, jobspec):
         """Write jobspec string to file"""
 
-        if jobspec is None:
+        if jobspec is None or len(jobspec) == 0:
             logger.info("job spec not provided")
             return(None)
 
@@ -46,6 +46,17 @@ class AuroraClient():
         file.flush()
 
         return(file)
+
+    def pack_instance_list(self, instances):
+        """Convert list/array of Aurora instances (shards) into single element"""
+
+        if instances is None or len(instances) == 0:
+            logger.info("shard(s) are not specified, that means all shards")
+            return(None)
+        else:
+            packed_list = ",".join(instances)
+            logger.info("list of shards: [%s]" % packed_list)
+            return(packed_list)
 
     def is_aurora_command_successful(self, cmd_output):
         """Test for success in the aurora command output"""
@@ -93,8 +104,13 @@ class AuroraClient():
         try:
             # aurora client requires jobspec be passed as file, no reading from STDIN
             jobspec_file = self.make_jobspec_file(jobspec)
-            cmd_args = [job_key.to_path(),jobspec_file.name]
+            if jobspec_file is None:
+                logger.warning("can not proceed with request, job configuration is missing")
+                return(job_key.to_path(), ["Failed to create Aurora job",
+                                           "Can not create job configuration object because",
+                                           "Job configuration is missing (not provided)!"])
 
+            cmd_args = [job_key.to_path(),jobspec_file.name]
             cmd_output = subprocess.check_output(
                 [self.aurora_cmd, "create"] + cmd_args, stderr=subprocess.STDOUT)
 
@@ -117,18 +133,27 @@ class AuroraClient():
             logger.warning("aurora -- create job failed")
             return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output.splitlines())
 
-    def update_job(self, cluster, role, environment, jobname, jobspec):
+    def update_job(self, cluster, role, environment, jobname, jobspec, instances=[]):
         """Method to update aurora job from job file and job id"""
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
         logger.info("request to update = %s", job_key.to_path())
 
+        instances = self.pack_instance_list(instances)
         cmd_output = ""
         try:
             # aurora client requires jobspec be passed as file, no reading from STDIN
             jobspec_file = self.make_jobspec_file(jobspec)
-            cmd_args = [job_key.to_path(),jobspec_file.name]
+            if jobspec_file is None:
+                logger.warning("can not proceed with request, job configuration is missing")
+                return(job_key.to_path(), ["Failed to update Aurora job",
+                                           "Can not create job configuration object because",
+                                           "Job configuration is missing (not provided)!"])
+
+            cmd_args = [job_key.to_path(), jobspec_file.name]
+            if instances is not None:
+                cmd_args = ["--shards=" + instances] + cmd_args
 
             cmd_output = subprocess.check_output(
                 [self.aurora_cmd, "update"] + cmd_args, stderr=subprocess.STDOUT)
@@ -188,13 +213,14 @@ class AuroraClient():
             logger.warning("aurora -- cancel update job")
             return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output.splitlines())
 
-    def delete_job(self, cluster, role, environment, jobname, jobspec=None):
+    def delete_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
         """Method to delete aurora job by job id"""
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
         logger.info("request to delete => %s", job_key.to_path())
 
+        instances = self.pack_instance_list(instances)
         cmd_output = ""
         try:
             cmd_args = [job_key.to_path(),]
@@ -204,8 +230,14 @@ class AuroraClient():
             if jobspec_file is not None:
                 cmd_args.append(jobspec_file.name)
 
+            if instances is not None:
+                cmd = "kill"
+                cmd_args = ["--shards=" + instances] + cmd_args
+            else:
+                cmd = "killall"
+
             cmd_output = subprocess.check_output(
-                [self.aurora_cmd, "killall"] + cmd_args, stderr=subprocess.STDOUT)
+                [self.aurora_cmd, cmd] + cmd_args, stderr=subprocess.STDOUT)
 
         except subprocess.CalledProcessError as e:
             logger.warning("aurora client exit status: %d, details follow" % e.returncode)
@@ -225,13 +257,14 @@ class AuroraClient():
             logger.warning("aurora -- delete job failed")
             return(job_key.to_path(), [], ["Error reported by aurora client"] + cmd_output.splitlines())
 
-    def restart_job(self, cluster, role, environment, jobname, jobspec=None):
+    def restart_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
         """Method to restart aurora job from job file and job id"""
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
         logger.info("request to restart => %s", job_key.to_path())
 
+        instances = self.pack_instance_list(instances)
         cmd_output = ""
         try:
             cmd_args = [job_key.to_path(),]
@@ -240,6 +273,8 @@ class AuroraClient():
             jobspec_file = self.make_jobspec_file(jobspec)
             if jobspec_file is not None:
                 cmd_args.append(jobspec_file.name)
+            if instances is not None:
+                cmd_args = ["--shards=" + instances] + cmd_args
 
             cmd_output = subprocess.check_output(
                 [self.aurora_cmd, "restart"] + cmd_args, stderr=subprocess.STDOUT)

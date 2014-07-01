@@ -33,7 +33,7 @@ class AuroraClient():
     def make_job_config(self, job_key, jobspec):
         """Write jobspec string to file"""
 
-        if jobspec is None:
+        if jobspec is None or len(jobspec) == 0:
             logger.info("job spec not provided")
             return(None)
 
