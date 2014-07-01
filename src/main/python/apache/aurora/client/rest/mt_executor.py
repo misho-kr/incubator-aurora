@@ -40,10 +40,10 @@ class ThreadExecutor():
         return self.delegate.create_job(cluster, role, environment, jobname, jobspec)
 
     @run_on_executor
-    def update_job(self, cluster, role, environment, jobname, jobspec):
+    def update_job(self, cluster, role, environment, jobname, jobspec, instances=[]):
         logger.info("entered ThreadExecutor::update_job")
 
-        return self.delegate.update_job(cluster, role, environment, jobname, jobspec)
+        return self.delegate.update_job(cluster, role, environment, jobname, jobspec, instances)
 
     @run_on_executor
     def cancel_update_job(self, cluster, role, environment, jobname, jobspec=None):
@@ -52,16 +52,16 @@ class ThreadExecutor():
         return self.delegate.cancel_update_job(cluster, role, environment, jobname, jobspec)
 
     @run_on_executor
-    def restart_job(self, cluster, role, environment, jobname, jobspec=None):
+    def restart_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
         logger.info("entered ThreadExecutor::restart_job")
 
-        return self.delegate.restart_job(cluster, role, environment, jobname, jobspec)
+        return self.delegate.restart_job(cluster, role, environment, jobname, jobspec, instances)
 
     @run_on_executor
-    def delete_job(self, cluster, role, environment, jobname):
+    def delete_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
         logger.info("entered ThreadExecutor::delete_job")
 
-        return self.delegate.delete_job(cluster, role, environment, jobname)
+        return self.delegate.delete_job(cluster, role, environment, jobname, instances)
 
 # factory --------------------------------------------------------------
 

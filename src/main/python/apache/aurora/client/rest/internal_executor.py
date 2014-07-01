@@ -58,6 +58,27 @@ class AuroraClient():
                 logger.warning("----------------------------------------")
                 raise e
 
+    def pack_instance_list(self, instances):
+        """Convert list/array of Aurora instances (shards) into single element"""
+
+        def list_from_single_or_range(x):
+            r = x.split("-")
+            if len(r) == 1:
+                return [int(r[0]),]
+            else:
+                return range(int(r[0]), int(r[1])+1)
+
+        if instances is None or len(instances) == 0:
+            logger.info("shard(s) are not specified, that means all instances")
+            return(None)
+        else:
+            packed_list = []
+            [[ packed_list.extend(list_from_single_or_range(x))
+                                        for x in instance.split(",")]
+                                            for instance in instances ]
+            logger.info("list of shards: %s" % packed_list)
+            return(packed_list)
+
     def response_string(self, resp):
         return('Response from scheduler: %s (message: %s)'
             % (ResponseCode._VALUES_TO_NAMES[resp.responseCode], resp.messageDEPRECATED))
@@ -112,13 +133,14 @@ class AuroraClient():
         logger.info("aurora -- create job successful")
         return(job_key.to_path(), None)
 
-    def update_job(self, cluster, role, environment, jobname, jobspec):
+    def update_job(self, cluster, role, environment, jobname, jobspec, instances=[]):
         """Method to update aurora job from job file and job id"""
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
         logger.info("request to update => %s", job_key.to_path())
 
+        instances = self.pack_instance_list(instances)
         try:
             config = self.make_job_config(job_key, jobspec)
         except Exception as e:
@@ -126,7 +148,7 @@ class AuroraClient():
                                        "Can not create job configuration object because", str(e)])
 
         api = make_client(cluster)
-        resp = api.update_job(config)
+        resp = api.update_job(config, instances=instances)
         if resp.responseCode != ResponseCode.OK:
             logger.warning("aurora -- update job failed")
             responseStr = self.response_string(resp)
@@ -160,13 +182,14 @@ class AuroraClient():
         logger.info("aurora -- cancel of update job successful")
         return(job_key.to_path(), None)
 
-    def restart_job(self, cluster, role, environment, jobname, jobspec=None):
+    def restart_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
         """Method to restart aurora job by job id"""
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
         logger.info("request to restart => %s", job_key.to_path())
 
+        instances = self.pack_instance_list(instances)
         try:
             config = self.make_job_config(job_key, jobspec)
         except Exception as e:
@@ -184,7 +207,7 @@ class AuroraClient():
 
         api = make_client(job_key.cluster)
         # instances = all shards, health check = 3 sec
-        resp = api.restart(job_key, None, updater_config, 3, config=config)
+        resp = api.restart(job_key, instances, updater_config, 3, config=config)
         if resp.responseCode != ResponseCode.OK:
             logger.warning("aurora -- restart job failed")
             responseStr = self.response_string(resp)
@@ -194,13 +217,14 @@ class AuroraClient():
         logger.info("aurora -- restart job successful")
         return(job_key.to_path(), None)
 
-    def delete_job(self, cluster, role, environment, jobname, jobspec=None):
+    def delete_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
         """Method to delete aurora job by job id"""
 
         job_key = AuroraJobKey.from_path(
                     self.make_job_key(cluster, role, environment, jobname))
         logger.info("request to delete => %s", job_key.to_path())
 
+        instances = self.pack_instance_list(instances)
         try:
             config = self.make_job_config(job_key, jobspec)
         except Exception as e:
@@ -208,7 +232,7 @@ class AuroraClient():
                                        "Can not create job configuration object because", str(e)])
 
         api = make_client(job_key.cluster)
-        resp = api.kill_job(job_key, config=config)
+        resp = api.kill_job(job_key, config=config, instances=instances)
         if resp.responseCode != ResponseCode.OK:
             logger.warning("aurora -- kill job failed")
             responseStr = self.response_string(resp)

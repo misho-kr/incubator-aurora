@@ -51,7 +51,7 @@ class AuroraClient():
         """Convert list/array of Aurora instances (shards) into single element"""
 
         if instances is None or len(instances) == 0:
-            logger.info("shard(s) are not specified, that means all shards")
+            logger.info("shard(s) are not specified, that means all instances")
             return(None)
         else:
             packed_list = ",".join(instances)

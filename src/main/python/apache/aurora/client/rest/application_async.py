@@ -94,10 +94,12 @@ class JobHandler(tornado.web.RequestHandler):
         jobspec = None
         if self.request.body is not None and len(self.request.body) > 0:
             jobspec = self.request.body
+        shards = self.get_query_arguments("shards")
 
         (jobkey, jobs, errors) = \
             yield self.application.get_executor().delete_job(
-                            cluster, role, environment, jobname, jobspec)
+                            cluster, role, environment, jobname,
+                            jobspec=jobspec, instances=shards)
         if errors is None:
             # no jobs were found to terminate, not an error
             if len(jobs) == 0:
@@ -125,9 +127,11 @@ class UpdateJobHandler(tornado.web.RequestHandler):
     def put(self, cluster, role, environment, jobname):
         logger.info("entered UpdateJobHandler::PUT")
 
+        shards = self.get_query_arguments("shards")
         (jobkey, errors) = \
             yield self.application.get_executor().update_job(
-                            cluster, role, environment, jobname, self.request.body)
+                            cluster, role, environment, jobname,
+                            jobspec=self.request.body, instances=shards)
         if errors is None:
             self.set_status(httplib.ACCEPTED)
             self.write({
@@ -187,10 +191,12 @@ class RestartJobHandler(tornado.web.RequestHandler):
         jobspec = None
         if self.request.body is not None and len(self.request.body) > 0:
             jobspec = self.request.body
+        shards = self.get_query_arguments("shards")
 
         (jobkey, errors) = \
             yield self.application.get_executor().restart_job(
-                            cluster, role, environment, jobname, jobspec)
+                            cluster, role, environment, jobname,
+                            jobspec=jobspec, instances=shards)
         if errors is None:
             self.set_status(httplib.ACCEPTED)
             self.write({
