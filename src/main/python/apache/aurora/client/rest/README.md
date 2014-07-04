@@ -8,19 +8,21 @@ It requires to build and install the Aurora client binaries, or to have access
 to server that has everything ready set up.
 
 The REST service allows remote access to the Aurora Scheduler without the
-prerequisites. Any REST client can be used, or the __curl__ command, and the 
+prerequisites. Any REST client, or the __curl__ command, can be used and the
 results are standard JSON documents.
 
 ## Implementation
 
 The REST service is built with the [Tornado framework](http://www.tornadoweb.org/en/stable/index.html). 
-The advantages of using Tornado are that it is written in Python like the
-Aurora client codebase and enables non-blocking execution that can allow the
+The advantages of using Tornado are:
+
+* It is written in Python like the Aurora client codebase
+* Enables non-blocking execution that can allow the
 service to scale up.
 
 The Tornado web server accepts requests for the REST API and delegates the
-execution to the Aurora client. The asynchronous execution is carried out with
-a thread or external process handled by [concurrent.futures](http://pythonhosted.org//futures).
+execution to the Aurora client. The simultaneous execution of multiple requests
+is carried out with threads or external processes handled by [concurrent.futures](http://pythonhosted.org//futures).
 
 ## Execution Modes
 
@@ -41,22 +43,22 @@ TBC __add picture here__ TBC
 ### A. Command execution modes
 
 The defining feature of this group is how requests are handled by the
-application code __after__ being accepted and dispathed by the Tornado
+application code __after__ being accepted and dispatched by the Tornado
 web-handling code.
 
-### A.1 Aurora API calls
+#### A.1 Aurora API calls
 
 The preferred execution mode to handle requests for the Aurora scheduler
 is by directly calling the Aurora client code. In order to enable this
 the REST service imports the same Python modules that the Aurora client uses
-and just calls the right methods.
+and simply calls the right methods.
 
 Potential problem with this execution mode is the chance that the Aurora
 client code may not be multithread-safe (MT-safe). As the Tornado server
 acceptes simultaneous requests and handles them asynchronously, if there
 are such issues they may lead to incorrect results or disruption of service.
 
-### A.2 External command
+#### A.2 External command
 
 The alternative, and probably safer but slower, execution mode is when
 requests are handled by delegating to an external command, that is the
@@ -68,48 +70,60 @@ single-threaded mode just as the Aurora client command line tool does.
 ### B. Request handling modes
 
 The execution modes in this group are different from each other
-by how the web requests are handled inside the server, after the requests
+by how the web requests are handled inside the server -- after the requests
 are accepted and before they are delegated to the Aurora client code.
 
 Regardless of the choice of how Aurora commands are actually executed,
 the REST service can handle requests synchronously or asynchronousely,
 one at a time or in parallel.
 
-### B.1 Multithreaded mode
+#### B.1 Multithreaded mode
 
 Multiple threads managed with [ThreadPool](http://pythonhosted.org//futures/#threadpoolexecutor-objects)
 are used to implement the simultaneous execution of RESTful calls. 
 
-### B.2 Multiprocess mode
+#### B.2 Multiprocess mode
 
 Similar to the previous mode but, instead of threads, external processes
 managed with [ProcessPool](http://pythonhosted.org//futures/#processpoolexecutor-objects)
 are used to execute the RESTful calls simultaneously.
 
-### B.3 Function calls
+#### B.3 Function calls
 
-This is the simplest from code perspective exeuction mode. There is nothing
+This is the simplest from code perspective execution mode. There is nothing
 complicated here -- the Tornado request handler calls directly the code
 that handles the exection of Aurora commands. The result is __synchronous__
 processing of RESTful calls one at a time. It will block for every request
 and will wait until it is completed, during which time it is unavailable
 to accept and process new requests.
 
-### B.4 Coroutines
+#### B.4 Coroutines
 
 Internal execution mode that enables, together with a thread or process pool,
-to process RESTful calls asynchornously. When this mode is combined with
+to process RESTful calls *asynchornously*. When this mode is combined with
 either multiple threads or processes that makes possible to process
 requests in parallel.
 
 ## Commands
 
-* Create job
-* GET /alpha/jobs/<cluster>/<role>
+* [GET /alpha/jobs/{cluster}/{role}](#get-alphajobsclusterrole): List all jobs
+* [PUT /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}](#put-alphajobclusterroleuserenvironmentjobname): Create job
+* [PUT /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update?shards={X}](#put-alphajobclusterroleuserenvironmentjobnameupdateshardsx): Update job
+* [DELETE /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update](#delete-alphajobclusterroleuserenvironmentjobnameupdate): Cancel update
+* [PUT /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/restart?shards={X}](#put-alphajobclusterroleuserenvironmentjobnamerestartshardsx): Restart job
+* [DELETE /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}?shards={X}](#delete-alphajobclusterroleuserenvironmentjobnameshardsx): Kill Aurora job
+* [GET /alpha/version](#get-alphaversion): Query service version
 
-List all jobs.
+## Examples
+
+#### `GET` /alpha/jobs/{cluster}/{role}
 
 ```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: TornadoServer/3.2.1
+```
+```json
 {
     "count": 3,
     "jobs": {
@@ -122,20 +136,115 @@ List all jobs.
 }
 ```
 
-* Update job
-* Cancel update
-* Restart job
-* DELETE /alpha/
+#### `PUT` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}
 
-Kill Aurora job.
+```bash
+$ curl -s -X PUT --data-binary @rhel59_world2.aurora \
+  "http://localhost:8888/alpha/jobs/paas-aurora/mkrastev/devel/rhel59_world2" | \
+  python -m json.tool
+```
 
-* GET /alpha/version
+**Response:**
+```
+HTTP/1.1 201 Created
+Content-Type: application/json
+Server: TornadoServer/3.2.1
+```
+```json
+{
+    "count": 1,
+    "job": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "key": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "status": "success"
+}
+```
 
-Query REST service version.
+#### `PUT` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update?shards={X}
+
+```bash
+$ curl -s -X PUT --data-binary @rhel59_world2.aurora \
+  "http://localhost:8888/alpha/jobs/paas-aurora/mkrastev/devel/rhel59_world2?shards=1" | \
+  python -m json.tool
+```
+
+**Response:**
+```
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Server: TornadoServer/3.2.1
+```
+```json
+{
+    "count": 1,
+    "job": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "key": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "status": "success"
+}
+```
+
+#### `DELETE` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update
 
 ```
-$ curl -s http://localhost:8888/alpha/version | python -m json.tool
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Server: TornadoServer/3.2.1
+```
+```json
+{
+    "count": 1,
+    "job": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "key": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "status": "success"
+}
+```
 
+#### `PUT` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/restart?shards={X}
+
+```
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Server: TornadoServer/3.2.1
+```
+```json
+{
+    "count": 1,
+    "job": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "key": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "status": "success"
+}
+```
+
+#### `DELETE` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}?shards={X}
+
+```bash
+$ curl -s -X \
+  DELETE "http://localhost:8888/alpha/jobs/paas-aurora/mkrastev/devel/rhel59_world2?shards=2" | \
+  python -m json.tool
+```
+
+**Response:**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: TornadoServer/3.2.1
+```
+````json
+{
+    "count": 1,
+    "job": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "key": "paas-aurora/mkrastev/devel/rhel59_world2",
+    "status": "success"
+}
+```
+
+#### `GET` /alpha/version
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Server: TornadoServer/3.2.1
+```
+```json
 {
     "status": "success",
     "version": "0.1"
