@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
-#  Simple interface to execute Aurora client commands
+#                       Aurora External Command Executor
 # ----------------------------------------------------------------------
 
 import logging
@@ -16,17 +15,24 @@ AURORA_SUCCESS_RESPONSE = r"Response from scheduler: OK"
 
 # basic handlers -------------------------------------------------------
 
-class AuroraClient():
+class AuroraExternalCommandExecutor():
+    """Executor for Aurora commands that spawns Aurora V1 client
+
+    Commands for the Aurora Scheduler are executed by delegating the
+    requests to external process to run the Aurora command-line client
+    with the appropriate arguments.
+
+    This is safer, albeit slower, execution mode in which the Aurora client
+    code is executed by a new process in single-threaded mode.
+    """
+
     def __init__(self, aurora_cmd):
         logger.info("aurora -- external executor created")
 
         self.aurora_cmd = aurora_cmd
 
-    def make_job_key(self, cluster, role, environment=None, jobname=None):
-        if environment is None:
-            return cluster + "/" + role
-        else:
-            return cluster + "/" + role + "/" + environment + "/" + jobname
+    def make_job_key(self, cluster, role):
+        return cluster + "/" + role
 
     def make_jobspec_file(self, jobspec):
         """Write jobspec string to file"""
@@ -59,7 +65,12 @@ class AuroraClient():
             return(packed_list)
 
     def is_aurora_command_successful(self, cmd_output):
-        """Test for success in the aurora command output"""
+        """Test for success in the aurora command output
+
+        Over-simplified test for success in the Aurora response that looks
+        for specific string to decide if the status of the Aurora command
+        was success, if no match is found then it is assumed to be failure.
+        """
 
         cmd_success_status = False
         for s in cmd_output.splitlines():
@@ -94,10 +105,9 @@ class AuroraClient():
             return(jobkey, [], ["Exception when listing aurora jobs"] + [e.msg])
 
     def create_job(self, cluster, role, environment, jobname, jobspec):
-        """Method to create aurora job from job file and job id"""
+        """Method to create aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to create => %s", job_key.to_path())
 
         cmd_output = ""
@@ -134,10 +144,9 @@ class AuroraClient():
             return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output.splitlines())
 
     def update_job(self, cluster, role, environment, jobname, jobspec, instances=[]):
-        """Method to update aurora job from job file and job id"""
+        """Method to update aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to update = %s", job_key.to_path())
 
         instances = self.pack_instance_list(instances)
@@ -177,10 +186,9 @@ class AuroraClient():
             return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output.splitlines())
 
     def cancel_update_job(self, cluster, role, environment, jobname, jobspec=None):
-        """Method to cancel an update of aurora job by job id"""
+        """Method to cancel an update of aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to cancel update of => %s", job_key.to_path())
 
         cmd_output = ""
@@ -214,10 +222,9 @@ class AuroraClient():
             return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output.splitlines())
 
     def delete_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
-        """Method to delete aurora job by job id"""
+        """Method to delete aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to delete => %s", job_key.to_path())
 
         instances = self.pack_instance_list(instances)
@@ -258,10 +265,9 @@ class AuroraClient():
             return(job_key.to_path(), [], ["Error reported by aurora client"] + cmd_output.splitlines())
 
     def restart_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
-        """Method to restart aurora job from job file and job id"""
+        """Method to restart aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to restart => %s", job_key.to_path())
 
         instances = self.pack_instance_list(instances)
@@ -297,8 +303,9 @@ class AuroraClient():
             logger.warning("aurora -- restart job failed")
             return(job_key.to_path(), ["Error reported by aurora client:"] + cmd_output.splitlines())
 
-
 # factory --------------------------------------------------------------
 
 def create(aurora_cmd=DEFAULT_AURORA_CMD):
-	return AuroraClient(aurora_cmd)
+    """Factory function for executor objects that spanw Aurora command-line client"""
+
+    return AuroraExternalCommandExecutor(aurora_cmd)

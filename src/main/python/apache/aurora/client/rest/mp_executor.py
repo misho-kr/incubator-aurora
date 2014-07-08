@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
-#  Asynchronous executor for Aurora commands
+#           Aurora Command Executor using ProcessPool
 # ----------------------------------------------------------------------
 
 import logging
@@ -16,15 +15,20 @@ logger = logging.getLogger("tornado.access")
 DEFAULT_MAX_PROCESSES = 4
 
 def call_by_name(method_name, obj, *args, **kwargs):
+    """Helper function to enable ProcessPoolExecutor to call object's method"""
+
     method = getattr(obj, method_name)
     return method(*args, **kwargs)
 
-class ProcessExecutor():
-    """Asynchronous Executor that can be used with async Tornado Application object
+class ProcessAuroraExecutor():
+    """Aurora Command Executor that spawns multiple processes to execute requests concurrently
+
+    Multiple processes managed with concurrent.futures.ProcessPoolExecutor
+    are used to provide simultaneous execution of Aurora commands.
     """
 
     def __init__(self, delegate, process_pool, io_loop):
-        logger.info("ProcessExecutor(procs=%s) created" %
+        logger.info("ProcessAuroraExecutor(procs=%s) created" %
             (str(process_pool._max_workers) if process_pool._max_workers else "unlimited"))
 
         self.delegate = delegate
@@ -32,7 +36,9 @@ class ProcessExecutor():
         self.io_loop  = io_loop
 
     def run_on_executor(self, method_name, obj, *args, **kwargs):
-        logger.info("ProcessExecutor delegated method: %s" % method_name)
+        """Helper method to enable ProcessPoolExecutor to call object's method"""
+
+        logger.info("ProcessAuroraExecutor delegated method: %s" % method_name)
 
         return self.executor.submit(call_by_name, method_name, obj, *args, **kwargs)
 
@@ -47,7 +53,7 @@ class ProcessExecutor():
 
     def __getattr__(self, name):
         if name in self.delegated_methods:
-            logger.info("ProcessExecutor lookup method: %s" % name)
+            logger.info("ProcessAuroraExecutor lookup method: %s" % name)
             return partial(self.run_on_executor, name, self.delegate)
         else:
             raise AttributeError("Instance does not have attribute: %s" % name)
@@ -55,7 +61,9 @@ class ProcessExecutor():
 # factory --------------------------------------------------------------
 
 def create(executor, process_pool=None, io_loop=None, max_procs=DEFAULT_MAX_PROCESSES):
+    """Factory function for Process-based Aurora executor objects"""
+
     io_loop     = io_loop or IOLoop.instance()
     process_pool = process_pool or ProcessPoolExecutor(max_procs)
 
-    return ProcessExecutor(executor, process_pool, io_loop)
+    return ProcessAuroraExecutor(executor, process_pool, io_loop)

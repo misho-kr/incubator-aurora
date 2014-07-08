@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
-#  Simple interface to execute Aurora client commands
+#                      Aurora Internal API Executor
 # ----------------------------------------------------------------------
 
 import tempfile
@@ -17,18 +16,28 @@ logger = logging.getLogger("tornado.application")
 
 # basic handlers -------------------------------------------------------
 
+# TODO: Is this still needed, and where?
 def caller_list_jobs(obj, cluster, role):
     return obj.list_jobs(cluster, role)
 
-class AuroraClient():
+class AuroraInternalApiExecutor():
+    """Executor for Aurora commands that calls directly Aurora client API
+
+    Preferred executor to process requests for the Aurora Scheduler which
+    uses the Aurora client API.
+
+    Potential problem with this executor is the chance that the Aurora
+    client code may not be multithread-safe (MT-safe). As the Tornado server
+    acceptes simultaneous requests and handles them asynchronously, if
+    there are such issues they may lead to incorrect results or disruption
+    of service.
+    """
+
     def __init__(self):
         logger.info("aurora -- internal executor created")
 
-    def make_job_key(self, cluster, role, environment=None, jobname=None):
-        if environment is None:
-            return cluster + "/" + role
-        else:
-            return cluster + "/" + role + "/" + environment + "/" + jobname
+    def make_job_key(self, cluster, role):
+        return cluster + "/" + role
 
     def make_job_config(self, job_key, jobspec):
         """Write jobspec string to file"""
@@ -110,10 +119,9 @@ class AuroraClient():
         return(jobkey, jobs, None)
 
     def create_job(self, cluster, role, environment, jobname, jobspec):
-        """Method to create aurora job from job file and job id"""
+        """Method to create aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to create job = %s", job_key.to_path())
 
         try:
@@ -134,10 +142,9 @@ class AuroraClient():
         return(job_key.to_path(), None)
 
     def update_job(self, cluster, role, environment, jobname, jobspec, instances=[]):
-        """Method to update aurora job from job file and job id"""
+        """Method to update aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to update => %s", job_key.to_path())
 
         instances = self.pack_instance_list(instances)
@@ -159,10 +166,9 @@ class AuroraClient():
         return(job_key.to_path(), None)
 
     def cancel_update_job(self, cluster, role, environment, jobname, jobspec=None):
-        """Method to cancel an update of aurora job by job id"""
+        """Method to cancel an update of aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to cancel update of => %s", job_key.to_path())
 
         try:
@@ -183,10 +189,9 @@ class AuroraClient():
         return(job_key.to_path(), None)
 
     def restart_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
-        """Method to restart aurora job by job id"""
+        """Method to restart aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to restart => %s", job_key.to_path())
 
         instances = self.pack_instance_list(instances)
@@ -218,10 +223,9 @@ class AuroraClient():
         return(job_key.to_path(), None)
 
     def delete_job(self, cluster, role, environment, jobname, jobspec=None, instances=[]):
-        """Method to delete aurora job by job id"""
+        """Method to delete aurora job"""
 
-        job_key = AuroraJobKey.from_path(
-                    self.make_job_key(cluster, role, environment, jobname))
+        job_key = AuroraJobKey(cluster, role, environment, jobname)
         logger.info("request to delete => %s", job_key.to_path())
 
         instances = self.pack_instance_list(instances)
@@ -245,4 +249,6 @@ class AuroraClient():
 # factory --------------------------------------------------------------
 
 def create():
-    return AuroraClient()
+    """Factory function for executor objects that call directly Aurora client API"""
+
+    return AuroraInternalApiExecutor()

@@ -1,6 +1,13 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
-#  Tornado handlers implementing REST interface to Aurora client commands
+#
+#                  Tornado Asynchronous Request Handlers
+#
+# Request handlers that enable asynchronous, non-blocking execution of
+# RESTful calls. To implement simultaneous execution of multiple
+# requests the executor object that is used by the handlers must not
+# block the execution, but instead it must somehow start the execution
+# in background and report the completion status later using futures.
+#
 # ----------------------------------------------------------------------
 
 import logging
@@ -14,6 +21,8 @@ logger = logging.getLogger("tornado.access")
 # basic handlers -------------------------------------------------------
 
 class VersionHandler(tornado.web.RequestHandler):
+    """Request handler reporting the version of the REST service"""
+
     def get(self):
         logger.info("entered VersionHandler::GET")
         self.write({
@@ -24,6 +33,8 @@ class VersionHandler(tornado.web.RequestHandler):
 # aurora interface handlers --------------------------------------------
 
 class ListJobsHandler(tornado.web.RequestHandler):
+    """Request handler to list all Aurora jobs matching a search criteria"""
+
     @tornado.web.asynchronous
     @gen.coroutine
     def get(self, cluster, role):
@@ -59,6 +70,13 @@ class ListJobsHandler(tornado.web.RequestHandler):
         self.finish()
 
 class JobHandler(tornado.web.RequestHandler):
+    """Request handler to create and kill Aurora jobs
+
+    1. HTTP PUT method to create jobs
+    2. HTTP DELETE method to kill jobs, optionally with _shards_ parameter(s)
+       to specify which instances should be killed
+    """
+
     @tornado.web.asynchronous
     @gen.coroutine
     def put(self, cluster, role, environment, jobname):
@@ -122,6 +140,12 @@ class JobHandler(tornado.web.RequestHandler):
             })
 
 class UpdateJobHandler(tornado.web.RequestHandler):
+    """Request handlers to update Aurora jobs, or cancel the update of
+
+    1. HTTP PUT method to update jobs, optionally with _shards_ query parameter
+    2. HTTP DELETE method to cancel the job update
+    """
+
     @tornado.web.asynchronous
     @gen.coroutine
     def put(self, cluster, role, environment, jobname):
@@ -183,6 +207,11 @@ class UpdateJobHandler(tornado.web.RequestHandler):
             })
 
 class RestartJobHandler(tornado.web.RequestHandler):
+    """Request handler to restart Aurora jobs
+
+    1. HTTP PUT method to restart job, optionally with _shards_ query parameter
+    """
+
     @tornado.web.asynchronous
     @gen.coroutine
     def put(self, cluster, role, environment, jobname):
@@ -218,15 +247,21 @@ class RestartJobHandler(tornado.web.RequestHandler):
 
 # application ----------------------------------------------------------
 
-class AuroraApplicaiton(tornado.web.Application):
-    def __init__(self, prefix, executor=None, **settings):
-        """Tornado application implementing REST service points"""
+class AuroraAsyncApplication(tornado.web.Application):
+    """Tornado asynchronous application implementing Aurora REST service points
 
-        logging.info("aurora -- application created")
+    Requests can be processed in non-blocking mode provided the executor
+    object can carry out the execution in the background and report the
+    completion status later by using futures.
+    """
+
+    def __init__(self, prefix, executor=None, **settings):
+        logging.info("Tornado async application created")
 
         self.url_prefix = prefix.lstrip('/').rstrip('/')
         self.executor   = executor
 
+        # TODO: remove this or make it optional and controlled by cli switch
         settings["debug"] = True
         handlers = self.make_app_handlers(self.url_prefix, [
             (r"/version",                           VersionHandler),
@@ -236,7 +271,7 @@ class AuroraApplicaiton(tornado.web.Application):
             (r"/jobs/(.+)/(.+)",                    ListJobsHandler)
         ])
 
-        super(AuroraApplicaiton, self).__init__(handlers, **settings)
+        super(AuroraAsyncApplication, self).__init__(handlers, **settings)
 
     def get_executor(self): return self.executor
 
@@ -247,4 +282,6 @@ class AuroraApplicaiton(tornado.web.Application):
 # factory --------------------------------------------------------------
 
 def create(url_prefix, executor=None, **settings):
-    return AuroraApplicaiton(url_prefix, executor=executor, **settings)
+    """Factory function for Tornado Applications implementing asynchronous processing"""
+
+    return AuroraAsyncApplication(url_prefix, executor=executor, **settings)
