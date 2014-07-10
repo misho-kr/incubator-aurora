@@ -146,11 +146,11 @@ process requests in parallel.
 ## Commands
 
 * [GET /alpha/jobs/{cluster}/{role}](#get-alphajobsclusterrole): List all jobs
-* [PUT /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}](#put-alphajobclusterroleuserenvironmentjobname): Create job
-* [PUT /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update?shards={X}](#put-alphajobclusterroleuserenvironmentjobnameupdateshardsx): Update job
-* [DELETE /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update](#delete-alphajobclusterroleuserenvironmentjobnameupdate): Cancel update
-* [PUT /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/restart?shards={X}](#put-alphajobclusterroleuserenvironmentjobnamerestartshardsx): Restart job
-* [DELETE /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}?shards={X}](#delete-alphajobclusterroleuserenvironmentjobnameshardsx): Kill Aurora job
+* [PUT /alpha/job/{cluster}/{role}/{environment}/{jobname}](#put-alphajobclusterroleenvironmentjobname): Create job
+* [PUT /alpha/job/{cluster}/{role}/{environment}/{jobname}/update?shards={X}](#put-alphajobclusterroleenvironmentjobnameupdateshardsx): Update job
+* [DELETE /alpha/job/{cluster}/{role}/{environment}/{jobname}/update](#delete-alphajobclusterroleenvironmentjobnameupdate): Cancel update
+* [PUT /alpha/job/{cluster}/{role}/{environment}/{jobname}/restart?shards={X}](#put-alphajobclusterroleenvironmentjobnamerestartshardsx): Restart job
+* [DELETE /alpha/job/{cluster}/{role}/{environment}/{jobname}?shards={X}](#delete-alphajobclusterroleenvironmentjobnameshardsx): Kill Aurora job
 * [GET /alpha/version](#get-alphaversion): Query service version
 
 ## Examples
@@ -175,7 +175,7 @@ Server: TornadoServer/3.2.1
 }
 ```
 
-#### `PUT` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}
+#### `PUT` /alpha/job/{cluster}/{role}/{environment}/{jobname}
 
 ```bash
 $ curl -s -X PUT --data-binary @rhel59_world2.aurora \
@@ -198,7 +198,7 @@ Server: TornadoServer/3.2.1
 }
 ```
 
-#### `PUT` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update?shards={X}
+#### `PUT` /alpha/job/{cluster}/{role}/{environment}/{jobname}/update?shards={X}
 
 ```bash
 $ curl -s -X PUT --data-binary @rhel59_world2.aurora \
@@ -221,7 +221,7 @@ Server: TornadoServer/3.2.1
 }
 ```
 
-#### `DELETE` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/update
+#### `DELETE` /alpha/job/{cluster}/{role}/{environment}/{jobname}/update
 
 ```
 HTTP/1.1 202 Accepted
@@ -237,7 +237,7 @@ Server: TornadoServer/3.2.1
 }
 ```
 
-#### `PUT` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}/restart?shards={X}
+#### `PUT` /alpha/job/{cluster}/{role}/{environment}/{jobname}/restart?shards={X}
 
 ```
 HTTP/1.1 202 Accepted
@@ -253,7 +253,7 @@ Server: TornadoServer/3.2.1
 }
 ```
 
-#### `DELETE` /alpha/job/{cluster}/{role}/{user}/{environment}/{jobname}?shards={X}
+#### `DELETE` /alpha/job/{cluster}/{role}/{environment}/{jobname}?shards={X}
 
 ```bash
 $ curl -s -X \
