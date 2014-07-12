@@ -1,42 +1,44 @@
 Aurora REST service
 ===================
 
-Aurora includes a powerful command line tool to execute
+Aurora includes a powerful command-line tool to submit to the scheduler
 [all sorts of query and management commands](https://github.com/apache/incubator-aurora/blob/master/docs/client-commands.md).
-Users can start, stop and monitor jobs that are submitted to the Aurora Scheduler.
-It requires to build and install the Aurora client binaries, or to have access
+Users can start, stop and monitor jobs that are handled by the Aurora
+Scheduler. This command-line tool requires to build and install the Aurora
+client libraries and binaries on the local machine, or to have access
 to server that has everything ready set up.
 
-The REST service allows remote access to the Aurora Scheduler without the
-prerequisites. Any REST client, or the __curl__ command, can be used and the
-results are standard JSON documents.
+The REST service allows remote access to the Aurora Scheduler without these
+prerequisites. Any REST client, or the __curl__ command, can be used to call
+the REST API and the results are standard JSON documents.
 
 ## Implementation
 
 The REST service is built with the [Tornado framework](http://www.tornadoweb.org/en/stable/index.html). 
 The advantages of using Tornado are:
 
-* It is written in Python like the Aurora client tools
-* Enables non-blocking execution that can allow the service to scale up.
+* It is written in Python like the Aurora command-line client
+* It offers non-blocking execution of requests that can help the service to
+scale up
 
 The Tornado web server accepts requests for the REST API and delegates the
-execution to the Aurora client. The simultaneous execution of multiple requests
-is carried out with either threads or external processes managed with
-[concurrent.futures](http://pythonhosted.org//futures).
+execution to the Aurora client code or command-line tool. The simultaneous
+execution of multiple requests is implemented with either threads or external
+processes managed with [concurrent.futures](http://pythonhosted.org//futures).
 
 #### Build and Installation
 
-The same instructions for building, testing and deploying the Aurora command-line
+The instructions for building, testing and deploying the Aurora command-line
 client apply for the REST service:
 
-* Run the following command which will produce executable file __dist/aurora_rest.pex__
+* Execute the following command which will produce executable file __dist/aurora_rest.pex__
 
 ```
 $ ./pants src/main/python/apache/aurora/client/bin:aurora_rest
 
 ```
 
-* Execute all client tests
+* Run all client tests
 
 ```
 $ ./pasts src/test/python/apache/aurora/rest/:all
