@@ -3,6 +3,7 @@
 # ----------------------------------------------------------------------
 
 import logging
+import multiprocessing
 
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
@@ -11,8 +12,6 @@ from concurrent.futures import ThreadPoolExecutor
 logger = logging.getLogger("tornado.access")
 
 # thread-pool executor ------------------------------------------------
-
-DEFAULT_MAX_THREADS = 4
 
 class ThreadAuroraExecutor():
     """Aurora Command Executor that spawns multiple threads to execute requests concurrently
@@ -67,8 +66,11 @@ class ThreadAuroraExecutor():
 
 # factory --------------------------------------------------------------
 
-def create(executor, thread_pool=None, io_loop=None, max_workers=DEFAULT_MAX_THREADS):
+def create(executor, thread_pool=None, io_loop=None, max_workers=0):
     """Factory function for Thread-based Aurora executor objects"""
+
+    if max_workers is None:
+        max_workers = multiprocessing.cpu_count()
 
     io_loop     = io_loop or IOLoop.instance()
     thread_pool = thread_pool or ThreadPoolExecutor(max_workers)

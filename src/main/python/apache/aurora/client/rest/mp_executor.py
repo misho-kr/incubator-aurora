@@ -3,6 +3,8 @@
 # ----------------------------------------------------------------------
 
 import logging
+import multiprocessing
+
 from functools import partial   # , wraps
 
 from tornado.ioloop import IOLoop
@@ -11,8 +13,6 @@ from concurrent.futures import ProcessPoolExecutor
 logger = logging.getLogger("tornado.access")
 
 # thread-pool executor ------------------------------------------------
-
-DEFAULT_MAX_PROCESSES = 4
 
 def call_by_name(method_name, obj, *args, **kwargs):
     """Helper function to enable ProcessPoolExecutor to call object's method"""
@@ -60,8 +60,11 @@ class ProcessAuroraExecutor():
 
 # factory --------------------------------------------------------------
 
-def create(executor, process_pool=None, io_loop=None, max_procs=DEFAULT_MAX_PROCESSES):
+def create(executor, process_pool=None, io_loop=None, max_procs=0):
     """Factory function for Process-based Aurora executor objects"""
+
+    if max_procs is None:
+        max_procs = multiprocessing.cpu_count()
 
     io_loop     = io_loop or IOLoop.instance()
     process_pool = process_pool or ProcessPoolExecutor(max_procs)
