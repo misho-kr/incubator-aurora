@@ -3,6 +3,7 @@
 #  REST service exposing API to call Aurora client commands
 # ----------------------------------------------------------------------
 
+import logging
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
@@ -20,6 +21,8 @@ from apache.aurora.client.rest import (
 )
 
 from tornado.options import define, options
+
+logger = logging.getLogger("tornado.access")
 
 # The REST service does not have any CPU-intensive tasks to speak of
 # therefore each CPU should be able to handle multiple requests
@@ -54,6 +57,9 @@ def proxy_main():
         client = external_executor.create()
     elif options.executor == "internal":
         client = internal_executor.create()
+    else:
+        logger.error("invalid executor: %s, exiting!" % options.executor)
+        return
 
     if options.concurrency == "coroutine":
         app = application_async.create("alpha", executor=coroutine_executor.create(client))
